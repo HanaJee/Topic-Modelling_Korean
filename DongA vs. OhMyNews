@@ -1,0 +1,96 @@
+''' this code can be run only on Jupyter '''
+import numpy as np
+import gensim
+import gensim.corpora as corpora
+from gensim.models import CoherenceModel
+
+import pyLDAvis
+#import pyLDAvis.gensim
+import os
+
+#os.chdir(r'C:\Users\hanaj\OneDrive - York St John University\Year 23-24 Sem2\Research_Justice\DongA_concrete')
+
+with open(r'C:\Users\hanaj\OneDrive - York St John University\Year 23-24 Sem1\Experiment_2_Justice\DA_combined_corpus\DA_combined.txt'
+, encoding='utf-8') as f:
+    lines = f.readlines()
+
+#data_words=#data_words=r'C:\Users\hanaj\OneDrive - York St John University\Year 23-24 Sem1\Experiment_2_Justice\OhMyNews_combined_corpus\ohmynews_combined.txt
+
+to_str=' '.join(lines)
+fin_str=[]
+for sen in to_str.split('.'):
+    fin_str.append([sen])
+
+if '대통령실' in fin_str[1][0].split():
+    print('True')
+
+# corpus that includes particular word
+tar_cntx=[]
+tar_word='핵'
+for i in fin_str:
+    if tar_word in i[0].split():
+        tar_cntx.append(i)
+
+len(tar_cntx)
+
+tokens=[]
+for i in tar_cntx:
+    for j in i:
+        token=j.split(' ')
+        tokens.append(token)
+print(tokens[0:5])
+
+for i in tokens:
+    for j in i:
+        if len(j) == 0:
+            i.remove(j)
+print(tokens[0:5])
+
+drop_news=[index for index, sentence in enumerate(tokens) if len(sentence) <=1]
+texts=np.delete(tokens, drop_news, axis=0)
+print(len(texts))
+
+dictionary = corpora.Dictionary(texts)
+corpus = [dictionary.doc2bow(text) for text in texts]
+
+print(corpus[1])
+
+# LDA Model
+from gensim.models import LdaModel
+
+lda_model = LdaModel(corpus, num_topics=5, id2word=dictionary)
+topics = lda_model.print_topics(num_words=30)
+topics
+
+# Choose the best number of topics
+
+min_topics, max_topics = 1,10
+coherence_scores=[]
+
+for num_topics in range(min_topics, max_topics):
+    model=LdaModel(corpus, num_topics=num_topics, id2word=dictionary)
+    coherence = CoherenceModel(model=model, texts=texts, dictionary=dictionary)
+    coherence_scores.append(coherence.get_coherence())
+    
+print(coherence_scores)
+
+import matplotlib.pyplot as plt
+#plt.sytle.use('seaborn-white')
+
+x=[int(i) for i in range(min_topics, max_topics)]
+
+plt.figure(figsize=(10,6))
+plt.plot(x, coherence_scores)
+plt.xlabel('Number of Topics')
+plt.ylabel('Coherence Scores')
+plt.show()
+
+lda_model = LdaModel(corpus, num_topics=7, id2word=dictionary)
+topics = lda_model.print_topics(num_topics=5)
+
+import pyLDAvis
+import pyLDAvis.gensim_models as gensimvis
+pyLDAvis.enable_notebook()
+
+vis=pyLDAvis.gensim_models.prepare(lda_model, corpus, dictionary)
+pyLDAvis.display(vis)
